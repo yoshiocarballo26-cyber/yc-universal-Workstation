@@ -5,6 +5,8 @@ const APP_SHELL = [
   new URL('./', scopeUrl).href,
   new URL('./index.html', scopeUrl).href,
   new URL('./manifest.json', scopeUrl).href,
+  new URL('./icons/icon-192.png', scopeUrl).href,
+  new URL('./icons/icon-512.png', scopeUrl).href,
   new URL('./icons/icon-192.svg', scopeUrl).href,
   new URL('./icons/icon-512.svg', scopeUrl).href,
 ];

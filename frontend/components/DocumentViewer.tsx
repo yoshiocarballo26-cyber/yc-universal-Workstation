@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { WorkstationFile, PDFAnnotation } from '../types';
 import { 
   FileText, Download, Printer, HighlightingBadge, PenTool, Type, 
   StickyNote, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, CheckCircle2, Table
 } from 'lucide-react';
-import { downloadTextAsFile } from '../services/fileService';
+import { getStoredAnnotations, saveStoredAnnotations } from '../services/fileService';
+import { exportDocumentToPdf } from '../services/pdfExport';
 
 interface DocumentViewerProps {
   file: WorkstationFile;
@@ -14,12 +15,31 @@ interface DocumentViewerProps {
 export const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, onUpdateFileContent }) => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [zoom, setZoom] = useState<number>(100);
-  const [annotations, setAnnotations] = useState<PDFAnnotation[]>([]);
+  // Las anotaciones y la firma se guardan por archivo en localStorage:
+  // ya no se pierden al cambiar de vista.
+  const [annotations, setAnnotations] = useState<PDFAnnotation[]>(() => getStoredAnnotations(file.id).annotations);
   const [activeTool, setActiveTool] = useState<'view' | 'highlight' | 'text' | 'signature'>('view');
-  const [signatureText, setSignatureText] = useState<string>('Lic. YC Workstation');
-  const [signed, setSigned] = useState<boolean>(false);
+  const [signatureText, setSignatureText] = useState<string>(() => getStoredAnnotations(file.id).signatureText);
+  const [signed, setSigned] = useState<boolean>(() => getStoredAnnotations(file.id).signed);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [textContent, setTextContent] = useState<string>(file.content || '');
+  const [exportStatus, setExportStatus] = useState<string | null>(null);
+
+  // Al cambiar de archivo, cargar sus anotaciones y su texto guardados.
+  useEffect(() => {
+    const stored = getStoredAnnotations(file.id);
+    setAnnotations(stored.annotations);
+    setSigned(stored.signed);
+    setSignatureText(stored.signatureText);
+    setTextContent(file.content || '');
+    setCurrentPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [file.id]);
+
+  // Guardar anotaciones y firma cada vez que cambian.
+  useEffect(() => {
+    saveStoredAnnotations(file.id, { annotations, signed, signatureText });
+  }, [annotations, signed, signatureText, file.id]);
 
   const isSpreadsheet = file.type === 'spreadsheet' || file.extension === 'csv';
 
@@ -71,11 +91,22 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, onUpdateFi
   };
 
   const handleExportPDF = () => {
-    downloadTextAsFile(
-      `--- EXPORTADO DESDE YC UNIVERSAL WORKSTATION ---\nDocumento: ${file.name}\nFirma: ${signed ? signatureText : 'Sin firma'}\n\n${textContent}`,
-      `${file.name.replace(/\.[^/.]+$/, "")}_exportado.txt`,
-      'text/plain'
-    );
+    setExportStatus('Generando PDF…');
+    try {
+      exportDocumentToPdf({
+        fileName: file.name,
+        bodyText: textContent,
+        signed,
+        signatureText,
+        annotations,
+        exportedAt: new Date(),
+      });
+      setExportStatus('PDF descargado.');
+    } catch (err) {
+      console.error('Error exportando PDF', err);
+      setExportStatus('No se pudo generar el PDF. Inténtalo de nuevo.');
+    }
+    window.setTimeout(() => setExportStatus(null), 4000);
   };
 
   const handleAddAnnotation = (type: 'highlight' | 'text' | 'signature') => {
@@ -105,7 +136,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, onUpdateFi
           <div>
             <h3 className="text-sm font-bold text-white leading-tight">{file.name}</h3>
             <span className="text-[11px] text-slate-400 font-mono">
-              {isSpreadsheet ? 'Motor: YC Grid Matrix' : 'Lector & Editor PDF/DOCX Nativo'}
+              {isSpreadsheet ? 'Hoja de cálculo (CSV)' : 'Lector y editor de documentos'}
             </span>
           </div>
         </div>
@@ -177,10 +208,13 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, onUpdateFi
           <button
             onClick={handleExportPDF}
             className="p-2 text-slate-300 hover:text-gold-400 bg-obsidian-800 hover:bg-obsidian-750 border border-obsidian-700 rounded-lg transition"
-            title="Exportar archivo"
+            title="Exportar como PDF"
           >
             <Download className="w-4 h-4" />
           </button>
+          {exportStatus && (
+            <span className="text-[11px] font-mono text-gold-300">{exportStatus}</span>
+          )}
           <button
             onClick={handlePrint}
             className="p-2 text-slate-300 hover:text-gold-400 bg-obsidian-800 hover:bg-obsidian-750 border border-obsidian-700 rounded-lg transition"
@@ -209,7 +243,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, onUpdateFi
                 </div>
                 <div className="text-right font-mono text-xs text-slate-400">
                   <span>Página {currentPage} / 1</span>
-                  <div className="text-[10px] text-emerald-400">Validación Criptográfica Local OK</div>
+                  <div className="text-[10px] text-gold-400">Guardado en tu dispositivo</div>
                 </div>
               </div>
 
@@ -252,7 +286,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, onUpdateFi
                   <div>
                     <p className="text-xs text-slate-400">Aprobado y sellado mediante:</p>
                     <p className="text-sm font-serif italic text-gold-300 font-semibold">{signatureText}</p>
-                    <p className="text-[10px] font-mono text-slate-500">Hash SHA-256: 7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1f</p>
+                    <p className="text-[10px] font-mono text-slate-500">Firmado en YC Universal Workstation</p>
                   </div>
                   <div className="px-4 py-2 border-2 border-dashed border-gold-500/50 rounded-lg text-center">
                     <span className="text-[10px] font-mono text-gold-400 uppercase tracking-widest block font-bold">FIRMA DIGITAL</span>

@@ -9,11 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@google/genai": "latest",
+    "jspdf": "^4.2.1",
+    "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "lucide-react": "latest",
-    "three": "latest",
-    "@google/genai": "latest"
+    "three": "latest"
   },
   "devDependencies": {
     "@types/node": "latest",

@@ -1,9 +1,23 @@
-import { WorkstationFile, ProjectItem, ClipboardItem } from '../types';
+import { WorkstationFile, ProjectItem, ClipboardItem, PDFAnnotation } from '../types';
 import { INITIAL_FILES } from '../constants';
 
 const FILES_STORAGE_KEY = 'yc_universal_workstation_files_v2';
 const PROJECTS_STORAGE_KEY = 'yc_workstation_projects_v1';
 const CLIPBOARD_STORAGE_KEY = 'yc_workstation_clipboard_v1';
+const ANNOTATIONS_STORAGE_KEY = 'yc_workstation_annotations_v1';
+
+// Ids de los archivos de ejemplo que traía la app y que ya no se
+// incluyen. Si un usuario los tiene guardados de antes, se retiran
+// solos al cargar (migración de una vez, sin borrar nada del usuario).
+const REMOVED_DEMO_FILE_IDS = [
+  'f-code-demo',
+  'f-csv-data',
+  'f-sample-pdf',
+  'f-sample-audio',
+  'f-sample-image',
+  'f-sample-3d',
+  'f-sample-archive',
+];
 
 export const getStoredFiles = (): WorkstationFile[] => {
   try {
@@ -13,68 +27,39 @@ export const getStoredFiles = (): WorkstationFile[] => {
       return INITIAL_FILES;
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : INITIAL_FILES;
+    if (!Array.isArray(parsed) || parsed.length === 0) return INITIAL_FILES;
+    const cleaned = parsed.filter((f: WorkstationFile) => !REMOVED_DEMO_FILE_IDS.includes(f.id));
+    if (cleaned.length !== parsed.length) {
+      // Se retiraron archivos de ejemplo viejos: se guarda la lista limpia.
+      try {
+        localStorage.setItem(FILES_STORAGE_KEY, JSON.stringify(cleaned));
+      } catch (err) {
+        console.error('Error saving cleaned files to localStorage', err);
+      }
+    }
+    return cleaned.length > 0 ? cleaned : INITIAL_FILES;
   } catch (err) {
     console.error('Error loading files from localStorage', err);
     return INITIAL_FILES;
   }
 };
 
-export const saveStoredFiles = (files: WorkstationFile[]): void => {
+export const saveStoredFiles = (files: WorkstationFile[]): boolean => {
   try {
     localStorage.setItem(FILES_STORAGE_KEY, JSON.stringify(files));
+    return true;
   } catch (err) {
+    // Suele ser QuotaExceededError con archivos grandes: localStorage
+    // tiene un límite de unos 5 MB por sitio. Se avisa a quien llama.
     console.error('Error saving files to localStorage', err);
+    return false;
   }
 };
 
 export const getStoredProjects = (): ProjectItem[] => {
   try {
     const raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
-    if (!raw) {
-      const initialProjects: ProjectItem[] = [
-        {
-          id: 'proj-alpha',
-          title: 'Sistema Operativo YC Workstation',
-          description: 'Desarrollo de módulos universales locales, visualizadores y pipelines offline.',
-          color: '#d4af37',
-          associatedFileIds: ['f-readme', 'f-code-demo'],
-          quickNotes: 'Prioridades:\n- Mantener cero dependencias externas de pago.\n- Procesamiento de audio/video y render WebGL continuo.',
-          createdAt: Date.now() - 86400000,
-          tasks: [
-            {
-              id: 'task-1',
-              title: 'Subtítulos SRT y VTT dinámicos',
-              description: 'Integrar parser y sincronización de texto sobre video en milisegundos.',
-              status: 'done',
-              priority: 'high',
-              fileIds: ['f-sample-audio'],
-              createdAt: Date.now() - 36000000
-            },
-            {
-              id: 'task-2',
-              title: 'Conversor local de formatos',
-              description: 'Pipeline de transcodificación de imágenes Canvas (PNG, JPG, WebP) y datos (CSV, JSON, Markdown).',
-              status: 'done',
-              priority: 'high',
-              fileIds: ['f-csv-data'],
-              createdAt: Date.now() - 25000000
-            },
-            {
-              id: 'task-3',
-              title: 'Portapapeles universal persistente',
-              description: 'Historial seguro en memoria local con acceso rápido y copia con 1 clic.',
-              status: 'in_progress',
-              priority: 'medium',
-              fileIds: ['f-readme'],
-              createdAt: Date.now() - 12000000
-            }
-          ]
-        }
-      ];
-      localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(initialProjects));
-      return initialProjects;
-    }
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
@@ -83,39 +68,20 @@ export const getStoredProjects = (): ProjectItem[] => {
   }
 };
 
-export const saveStoredProjects = (projects: ProjectItem[]): void => {
+export const saveStoredProjects = (projects: ProjectItem[]): boolean => {
   try {
     localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
+    return true;
   } catch (e) {
     console.error('Error saving projects', e);
+    return false;
   }
 };
 
 export const getStoredClipboard = (): ClipboardItem[] => {
   try {
     const raw = localStorage.getItem(CLIPBOARD_STORAGE_KEY);
-    if (!raw) {
-      const initialClipboard: ClipboardItem[] = [
-        {
-          id: 'clip-1',
-          content: 'https://yc-universal-workstation.local/workspace',
-          source: 'Navegación Sistema',
-          type: 'text',
-          timestamp: Date.now() - 3600000,
-          favorite: true
-        },
-        {
-          id: 'clip-2',
-          content: '{\n  "status": "ONLINE",\n  "offlineStorage": "LocalStorage v2",\n  "cryptographicSeals": true\n}',
-          source: 'quantum_engine.js',
-          type: 'json',
-          timestamp: Date.now() - 1800000,
-          favorite: false
-        }
-      ];
-      localStorage.setItem(CLIPBOARD_STORAGE_KEY, JSON.stringify(initialClipboard));
-      return initialClipboard;
-    }
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
@@ -124,11 +90,54 @@ export const getStoredClipboard = (): ClipboardItem[] => {
   }
 };
 
-export const saveStoredClipboard = (items: ClipboardItem[]): void => {
+export const saveStoredClipboard = (items: ClipboardItem[]): boolean => {
   try {
     localStorage.setItem(CLIPBOARD_STORAGE_KEY, JSON.stringify(items));
+    return true;
   } catch (e) {
     console.error('Error saving clipboard', e);
+    return false;
+  }
+};
+
+// --- Anotaciones y firmas de documentos, persistentes por archivo ---
+// Antes vivían solo en el estado del componente y se perdían al cambiar
+// de vista. Ahora se guardan en localStorage, con clave por id de archivo.
+export interface StoredAnnotations {
+  annotations: PDFAnnotation[];
+  signed: boolean;
+  signatureText: string;
+}
+
+export const getStoredAnnotations = (fileId: string): StoredAnnotations => {
+  const empty: StoredAnnotations = { annotations: [], signed: false, signatureText: 'YC Workstation' };
+  try {
+    const raw = localStorage.getItem(ANNOTATIONS_STORAGE_KEY);
+    if (!raw) return empty;
+    const map = JSON.parse(raw);
+    const entry = map[fileId];
+    if (!entry) return empty;
+    return {
+      annotations: Array.isArray(entry.annotations) ? entry.annotations : [],
+      signed: !!entry.signed,
+      signatureText: typeof entry.signatureText === 'string' ? entry.signatureText : 'YC Workstation',
+    };
+  } catch (e) {
+    console.error('Error loading annotations', e);
+    return empty;
+  }
+};
+
+export const saveStoredAnnotations = (fileId: string, data: StoredAnnotations): boolean => {
+  try {
+    const raw = localStorage.getItem(ANNOTATIONS_STORAGE_KEY);
+    const map = raw ? JSON.parse(raw) : {};
+    map[fileId] = data;
+    localStorage.setItem(ANNOTATIONS_STORAGE_KEY, JSON.stringify(map));
+    return true;
+  } catch (e) {
+    console.error('Error saving annotations', e);
+    return false;
   }
 };
 

@@ -1,0 +1,16 @@
+// YC Universal Workstation — reglas de Firestore
+//
+// La app hoy trabaja en local y no exige cuenta: la nube queda CERRADA
+// por defecto hasta que una función necesite datos en la nube.
+// No hay ninguna colección en uso por la Workstation en este momento.
+// Si en el futuro se agrega sincronización o cuentas, se abre solo la
+// colección necesaria, con reglas por usuario, nunca "allow read, write: if true".
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

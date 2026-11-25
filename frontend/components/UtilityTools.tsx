@@ -43,13 +43,13 @@ export const UtilityTools: React.FC<UtilityToolsProps> = ({ files = [], onFileGe
       <div className="pb-4 border-b border-obsidian-800 flex justify-between items-center">
         <div>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            Matriz de Compatibilidad & Centro de Herramientas
+            Herramientas y formatos
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-gold-500/20 text-gold-400 font-mono border border-gold-500/40">
               v2.5
             </span>
           </h2>
           <p className="text-xs text-slate-400 font-mono mt-0.5">
-            Conversor Local de Formatos, Calculadora Científica y Arquitectura de Compatibilidad
+            Conversor de formatos, calculadora y lista de formatos que abre la app
           </p>
         </div>
       </div>
@@ -63,7 +63,7 @@ export const UtilityTools: React.FC<UtilityToolsProps> = ({ files = [], onFileGe
         <div className="lg:col-span-2 bg-obsidian-900 border border-obsidian-800 rounded-2xl p-6 shadow-xl flex flex-col">
           <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
             <h3 className="text-sm font-bold text-gold-400 uppercase tracking-wider flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4" /> Matriz Oficial de Formatos y Motores
+              <ShieldCheck className="w-4 h-4" /> Matriz de formatos
             </h3>
             <input
               type="text"

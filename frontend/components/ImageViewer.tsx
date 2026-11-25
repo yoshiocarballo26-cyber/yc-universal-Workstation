@@ -16,11 +16,13 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ file }) => {
   const [invert, setInvert] = useState<number>(0);
 
   const isSvg = file.extension === 'svg';
+  // Sin datos de imagen no se inventa una foto de internet: se muestra
+  // un aviso honesto en la vista.
   const imageSource = file.content?.startsWith('data:') || file.content?.startsWith('http')
     ? file.content
     : isSvg
     ? `data:image/svg+xml;utf8,${encodeURIComponent(file.content || '')}`
-    : `https://picsum.photos/1200/800?seed=${file.id}`;
+    : null;
 
   const resetFilters = () => {
     setZoom(100);
@@ -94,11 +96,21 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ file }) => {
             filter: `brightness(${brightness}%) contrast(${contrast}%) grayscale(${grayscale}%) invert(${invert}%)`
           }}
         >
-          <img
-            src={imageSource}
-            alt={file.name}
-            className="max-h-[550px] max-w-full rounded-lg object-contain select-none pointer-events-none"
-          />
+          {imageSource ? (
+            <img
+              src={imageSource}
+              alt={file.name}
+              className="max-h-[550px] max-w-full rounded-lg object-contain select-none pointer-events-none"
+            />
+          ) : (
+            <div className="text-center p-8">
+              <ImageIcon className="w-12 h-12 mx-auto mb-3 text-slate-600" />
+              <p className="text-sm font-semibold text-slate-300">Esta imagen no tiene datos para mostrar</p>
+              <p className="text-xs text-slate-500 font-mono mt-1 max-w-xs mx-auto">
+                Importa el archivo de nuevo desde tu dispositivo.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { WorkstationFile } from '../types';
-import { Box, RotateCw, Eye, Layers, Compass, Sun } from 'lucide-react';
+import { Box, RotateCw, Eye, Layers, Compass, Sun, ExternalLink } from 'lucide-react';
+import { YC_EDITOR_URL } from './HomeScreen';
 
 interface ThreeViewerProps {
   file: WorkstationFile;
@@ -176,7 +177,7 @@ export const ThreeViewer: React.FC<ThreeViewerProps> = ({ file }) => {
                 geometryType === 'icosahedron' ? 'bg-gold-500 text-obsidian-950 font-bold' : 'text-slate-400 hover:text-white'
               }`}
             >
-              Icosaedro STL
+              Icosaedro
             </button>
             <button
               onClick={() => setGeometryType('cylinder')}
@@ -184,9 +185,19 @@ export const ThreeViewer: React.FC<ThreeViewerProps> = ({ file }) => {
                 geometryType === 'cylinder' ? 'bg-gold-500 text-obsidian-950 font-bold' : 'text-slate-400 hover:text-white'
               }`}
             >
-              Cilindro CAD
+              Cilindro
             </button>
           </div>
+
+          <a
+            href={YC_EDITOR_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="px-3 py-1.5 text-xs font-bold rounded-lg bg-gold-500 text-obsidian-950 hover:bg-gold-400 flex items-center gap-1.5 transition"
+            title="La edición 3D se hace en YC Editor 3D"
+          >
+            Abrir en YC Editor 3D <ExternalLink className="w-3.5 h-3.5" />
+          </a>
 
           <button
             onClick={() => setWireframe(!wireframe)}
@@ -215,7 +226,7 @@ export const ThreeViewer: React.FC<ThreeViewerProps> = ({ file }) => {
           <div className="text-gold-400 font-bold uppercase tracking-wider">HUD Tridimensional YC</div>
           <div className="text-slate-300">Rotación: Activa (Arrastre con mouse)</div>
           <div className="text-slate-400">Iluminación: PBR Dual Spot + Ambiance</div>
-          <div className="text-emerald-400">Render: 60 FPS Estable</div>
+          <div className="text-slate-400">La edición 3D se hace en YC Editor 3D</div>
         </div>
       </div>
     </div>

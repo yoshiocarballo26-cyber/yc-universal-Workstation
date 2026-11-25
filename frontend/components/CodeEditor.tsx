@@ -65,7 +65,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ file, onSaveContent }) =
               </span>
             </h3>
             <span className="text-[11px] text-slate-400 font-mono">
-              {lines.length} líneas • {content.length} caracteres • Autoguardado Activo
+              {lines.length} líneas • {content.length} caracteres • Se guarda al presionar Guardar
             </span>
           </div>
         </div>

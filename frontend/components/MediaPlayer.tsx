@@ -100,7 +100,8 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
   const [trebleGain, setTrebleGain] = useState<number>(2);
   const [activeTab, setActiveTab] = useState<'player' | 'playlist' | 'subtitles' | 'equalizer' | 'metadata'>('player');
 
-  // Playlist State
+  // Playlist State: solo el archivo actual. Antes había pistas de
+  // demostración que no existían en la biblioteca; ya no están.
   const [playlist, setPlaylist] = useState<PlaylistItem[]>([
     {
       id: 'p-1',
@@ -109,34 +110,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       type: file.type === 'video' ? 'video' : 'audio',
       duration: 180,
       extension: file.extension
-    },
-    {
-      id: 'p-2',
-      fileId: 'demo-orbit-echo',
-      title: 'Orbit_Echoes_Spatial.flac',
-      type: 'audio',
-      duration: 245,
-      extension: 'flac'
-    },
-    {
-      id: 'p-3',
-      fileId: 'demo-synthetic-drone',
-      title: 'Obsidian_Drone_Sequence.wav',
-      type: 'audio',
-      duration: 310,
-      extension: 'wav'
     }
   ]);
 
-  // Subtitles State
-  const [subtitles, setSubtitles] = useState<SubtitleCue[]>([
-    { id: 1, start: 1, end: 5, text: "Bienvenido a YC Universal Workstation" },
-    { id: 2, start: 6, end: 12, text: "Reproducción con decodificación de audio y video 100% offline" },
-    { id: 3, start: 13, end: 20, text: "Subtítulos sincronizados con precisión de milisegundos" },
-    { id: 4, start: 22, end: 32, text: "Soporte completo para archivos SRT, VTT y listas de reproducción" }
-  ]);
+  // Subtitles State: empieza vacía; el usuario carga su .srt o .vtt.
+  const [subtitles, setSubtitles] = useState<SubtitleCue[]>([]);
   const [subtitlesEnabled, setSubtitlesEnabled] = useState<boolean>(true);
   const [activeSubtitleText, setActiveSubtitleText] = useState<string>('');
+  const [videoError, setVideoError] = useState<string | null>(null);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
@@ -173,6 +154,12 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
       ]);
     }
   }, [file]);
+
+  // Al cambiar de pista, limpiar el error de video y el tiempo.
+  useEffect(() => {
+    setVideoError(null);
+    setCurrentTime(0);
+  }, [file.id]);
 
   const startSyntheticAudio = () => {
     try {
@@ -390,7 +377,14 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
                   className="w-full max-h-[380px] rounded-lg"
                   src={file.content?.startsWith('http') || file.content?.startsWith('data:') ? file.content : undefined}
                   onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 180)}
+                  onError={() => setVideoError('No se pudo reproducir este video en el navegador. Prueba con MP4 o WebM.')}
                 />
+
+                {videoError && (
+                  <div className="absolute top-4 left-4 right-4 bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs font-mono px-3 py-2 rounded-xl z-30">
+                    {videoError}
+                  </div>
+                )}
 
                 {!file.content?.startsWith('data:') && !file.content?.startsWith('http') && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-obsidian-900/90 backdrop-blur-sm">
@@ -655,6 +649,11 @@ export const MediaPlayer: React.FC<MediaPlayerProps> = ({
 
           {/* Subtitles List */}
           <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
+            {subtitles.length === 0 && (
+              <p className="text-xs text-slate-500 font-mono text-center py-8">
+                Aún no hay subtítulos. Carga un archivo .srt o .vtt con el botón de arriba.
+              </p>
+            )}
             {subtitles.map((cue) => {
               const isCurrentCue = currentTime >= cue.start && currentTime <= cue.end;
               return (

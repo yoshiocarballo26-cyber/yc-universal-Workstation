@@ -23,21 +23,32 @@ export const FormatConverter: React.FC<FormatConverterProps> = ({ files, onFileG
   // Data / Text Conversion State
   const [inputDataType, setInputDataType] = useState<'csv' | 'json' | 'markdown'>('csv');
   const [targetDataType, setTargetDataType] = useState<'csv' | 'json' | 'markdown'>('json');
+  // Datos de ejemplo, claramente marcados como ejemplo en la vista.
   const [dataInputContent, setDataInputContent] = useState<string>(
-`Nombre,Departamento,Presupuesto,Estado
-Sistema Alpha,Ingeniería,45000,Activo
-Módulo YC Core,Investigación,32000,Producción
-Visor 3D,Multimedia,18000,Completado`
+`Fruta,Color,Precio
+Manzana,Rojo,25
+Pera,Verde,20
+Uva,Morado,30`
   );
   const [dataOutputContent, setDataOutputContent] = useState<string>('');
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
+  const [convertError, setConvertError] = useState<string | null>(null);
 
   const imageFiles = files.filter(f => f.type === 'image' || ['png', 'jpg', 'jpeg', 'webp', 'svg'].includes(f.extension));
 
   // --- Local Image Transcoding via Canvas ---
   const handleConvertImage = () => {
     setIsConvertingImage(true);
+    setConvertError(null);
     const chosenFile = files.find(f => f.id === selectedImageFileId) || imageFiles[0];
+
+    // Sin imagen en la biblioteca no hay nada que convertir: no se baja
+    // ninguna imagen de internet como sustituto.
+    if (!chosenFile || (!chosenFile.content && chosenFile.extension !== 'svg')) {
+      setIsConvertingImage(false);
+      setConvertError('Selecciona una imagen de tu biblioteca para convertirla.');
+      return;
+    }
 
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -46,7 +57,13 @@ Visor 3D,Multimedia,18000,Completado`
       ? chosenFile.content
       : chosenFile?.extension === 'svg'
       ? `data:image/svg+xml;utf8,${encodeURIComponent(chosenFile.content || '')}`
-      : 'https://picsum.photos/800/600';
+      : null;
+
+    if (!src) {
+      setIsConvertingImage(false);
+      setConvertError('Esta imagen no tiene datos para convertir. Impórtala de nuevo.');
+      return;
+    }
 
     img.src = src;
     img.onload = () => {
@@ -72,7 +89,7 @@ Visor 3D,Multimedia,18000,Completado`
     };
     img.onerror = () => {
       setIsConvertingImage(false);
-      alert('Error cargando la imagen para procesar en el Canvas.');
+      setConvertError('No se pudo cargar la imagen para convertirla. Prueba con otra imagen.');
     };
   };
 
@@ -197,7 +214,7 @@ Visor 3D,Multimedia,18000,Completado`
           <div>
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               Conversor Universal de Formatos Local
-              <span className="text-[10px] px-2 py-0.5 rounded bg-gold-500/20 text-gold-300 font-mono">100% OFFLINE</span>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-gold-500/20 text-gold-300 font-mono">Local</span>
             </h3>
             <p className="text-xs text-slate-400 font-mono mt-0.5">
               Canvas Transcoder (PNG, JPG, WebP) & Transformador de Estructuras (CSV, JSON, Markdown)
@@ -237,7 +254,7 @@ Visor 3D,Multimedia,18000,Completado`
                 onChange={(e) => setSelectedImageFileId(e.target.value)}
                 className="w-full bg-obsidian-950 border border-obsidian-750 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-gold-500"
               >
-                <option value="">-- Imagen de Muestra del Sistema --</option>
+                <option value="">-- Elige una imagen de tu biblioteca --</option>
                 {imageFiles.map(img => (
                   <option key={img.id} value={img.id}>{img.name} ({img.extension.toUpperCase()})</option>
                 ))}
@@ -282,6 +299,12 @@ Visor 3D,Multimedia,18000,Completado`
               <RefreshCw className={`w-4 h-4 ${isConvertingImage ? 'animate-spin' : ''}`} />
               {isConvertingImage ? 'Procesando en Canvas...' : 'Convertir Formato Local'}
             </button>
+
+            {convertError && (
+              <div className="p-3 bg-rose-500/10 rounded-xl border border-rose-500/30 text-[11px] text-rose-300 font-mono">
+                {convertError}
+              </div>
+            )}
 
             <div className="p-3 bg-obsidian-850 rounded-xl border border-obsidian-750 text-[11px] text-slate-400 font-mono">
               Procesamiento directo en la GPU/Canvas de su navegador. Cero peticiones de red o carga en servidores externos.
@@ -356,7 +379,7 @@ Visor 3D,Multimedia,18000,Completado`
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-mono text-slate-400 mb-1">Entrada ({inputDataType.toUpperCase()}):</label>
+              <label className="block text-xs font-mono text-slate-400 mb-1">Entrada ({inputDataType.toUpperCase()}) — ejemplo, reemplázalo con tus datos:</label>
               <textarea
                 value={dataInputContent}
                 onChange={(e) => setDataInputContent(e.target.value)}
